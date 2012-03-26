@@ -1,0 +1,35 @@
+<document xmlns="http://maven.apache.org/changes/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/changes/1.0.0 http://maven.apache.org/xsd/changes-1.0.0.xsd">
+  <properties>
+    <title>Google Maps Helper</title>
+    <author email="isaac.salgueiro@discalis.com">Isaac Salgueiro</author>
+  </properties>
+  <body>
+     <release version="1.0.0" date="2012-03-26" description="Public release">
+    	<action dev="isalgueiro" type="update">
+    		First pulic release.
+    	</action>
+    </release>
+    <release version="0.0.4" date="2011-04-08" description="Evolutivo">
+    	<action dev="isalgueiro" type="update">
+    		Throws GeocoderRuntimeException when gmaps calls give us an HTTP 500 error code.
+    	</action>
+    </release>
+    <release version="0.0.3" date="2011-04-06" description="Bugfix">
+    	<action dev="isalgueiro" type="fix">
+    		Requires Java 1.6
+    	</action>
+    </release>
+    <release version="0.0.2" date="2011-04-06" description="Evolutivo">
+    	<action dev="isalgueiro" type="fix">
+    		Workaround OVER_QUERY_LIMIT: Geocoder class is now a singleton and api calls are delayed at least by one second.
+    	</action>
+    </release>
+    <release version="0.0.1" description="Inicial">
+    	<action dev="isalgueiro" type="add">
+    		Start!
+    	</action>
+    </release>
+  </body>
+</document>
