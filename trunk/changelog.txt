@@ -1,0 +1,2 @@
+see src/changes/changes.xml
+http://maven.apache.org/plugins/maven-changes-plugin/usage.html
