@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.discalis.utils</groupId>
 	<artifactId>googlemaps-helper</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 	<name>Google Maps Helper</name>
 	<description>
 		Helper library for executing Google Maps web services.

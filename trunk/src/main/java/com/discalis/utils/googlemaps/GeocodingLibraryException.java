@@ -13,4 +13,13 @@ public class GeocodingLibraryException extends Exception {
 	public GeocodingLibraryException(String message, Throwable t) {
 		super(message, t);
 	}
+	
+	/**
+	 * 
+	 * @param message
+	 * @since 1.0.1
+	 */
+	public GeocodingLibraryException(String message) {
+		super(message);
+	}
 }
