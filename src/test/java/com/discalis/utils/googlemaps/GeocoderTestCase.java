@@ -16,11 +16,19 @@ public class GeocoderTestCase {
 		final Geocoder geocoder = Geocoder.getInstance();
 		Address address = new Address("Rúa do Rouco, Nº 2, 36002, Pontevedra, Pontevedra");
 		geocoder.geocode(address);
-		if ((address.getLatitude() != 42431488) || (address.getLongitude() != -8642188)) {
+		logger.debug(address);
+		if (!"2".equals(address.getNumber())) {
+			throw new GeocodingLibraryException("Unit test failed");
+		}
+		if ((address.getLatitude() != 42431396) || (address.getLongitude() != -8642202)) {
 			throw new Exception("Geocoded address with unknown lat/long: " + address);
 		}
 		address = new Address("canovas del castillo, 1 planta 2 local 1, 36202, vigo, pontevedra");
 		geocoder.geocode(address);
+		logger.debug(address);
+		if (!"Vigo".equals(address.getLocality())) {
+			throw new GeocodingLibraryException("Unit test failed");
+		}
 		if ((address.getLatitude() != 42237071) || (address.getLongitude() != -8727469)) {
 			throw new Exception("Geocoded address with unknown lat/long: " + address);
 		}

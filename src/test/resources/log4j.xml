@@ -10,7 +10,7 @@
 		</layout>
 	</appender>
 	<logger name="com.discalis.utils.googlemaps.Geocoder">
-		<level value="info" />
+		<level value="INFO" />
 	</logger>
 	<root>
 		<appender-ref ref="CONSOLE" />

@@ -87,19 +87,13 @@ public class Geocoder {
 		return INSTANCE;
 	}
 
-	
-	
 	private void storeLatLong(Address address) throws GeocodingLibraryException {
-		NodeList resultNodeList = null;
 		try {
-			resultNodeList = (NodeList) xpath.evaluate(
+			final NodeList resultNodeList = (NodeList) xpath.evaluate(
 					"/GeocodeResponse/result[1]/geometry/location/*", geocoderResultDocument,
 					XPathConstants.NODESET);
-		} catch (XPathExpressionException e) {
-			throw new GeocodingLibraryException("Google Maps API change!", e);
-		}
 		for (int i = 0; i < resultNodeList.getLength(); ++i) {
-			Node node = resultNodeList.item(i);
+				final Node node = resultNodeList.item(i);
 			if ("lat".equals(node.getNodeName())) {
 				address.setLatitude((int) (Float.parseFloat(node.getTextContent()) * 1E6));
 			}
@@ -107,29 +101,79 @@ public class Geocoder {
 				address.setLongitude((int) (Float.parseFloat(node.getTextContent()) * 1E6));
 			}
 		}
+		} catch (XPathExpressionException e) {
+			throw new GeocodingLibraryException("Google Maps API change!", e);
+		}
+	}
+
+	private void storeAddressDetails(Address address) throws GeocodingLibraryException {
+		try {
+			Node node = (Node) xpath.evaluate("/GeocodeResponse/status[1]", geocoderResultDocument,
+					XPathConstants.NODE);
+			final String status = node.getTextContent().trim();
+			if (!"OK".equals(status)) {
+				logger.debug("Geocoder response status: " + status + ". No address results for "
+						+ address.getRawAddress());
+				return;
+			}
+			node = (Node) xpath.evaluate("/GeocodeResponse/result[1]/formatted_address",
+					geocoderResultDocument, XPathConstants.NODE);
+			address.setFormatted(node.getTextContent().trim());
+			final NodeList resultNodeList = (NodeList) xpath.evaluate(
+					"/GeocodeResponse/result[1]/address_component", geocoderResultDocument,
+					XPathConstants.NODESET);
+			for (int i = 0; i < resultNodeList.getLength(); ++i) {
+				final Node addressNode = resultNodeList.item(i);
+				final String addressType = ((Node) xpath.evaluate("type[1]", addressNode,
+						XPathConstants.NODE)).getTextContent().trim();
+				final String addressValue = ((Node) xpath.evaluate("long_name", addressNode,
+						XPathConstants.NODE)).getTextContent().trim();
+				if ("postal_code".equals(addressType)) {
+					address.setPostalCode(addressValue);
+				} else if ("country".equals(addressType)) {
+					address.setCountry(addressValue);
+				} else if ("administrative_area_level_1".equals(addressType)) {
+					address.setState(addressValue);
+				} else if ("administrative_area_level_2".equals(addressType)) {
+					address.setProvince(addressValue);
+				} else if ("locality".equals(addressType)) {
+					address.setLocality(addressValue);
+				} else if ("route".equals(addressType)) {
+					address.setStreet(addressValue);
+				} else if ("street_number".equals(addressType)) {
+					address.setNumber(addressValue);
+				} else {
+					logger.warn("Ignored address_component element: " + addressType + " = "
+							+ addressValue);
+				}
+			}
+		} catch (XPathExpressionException e) {
+			throw new GeocodingLibraryException("Google Maps API change!", e);
+		}
+
 	}
 	
 	/**
-	 * Geolocalize <code>address</code>. Passes {@link Address#getRawAddress()} to Google Maps API.
-	 * <p>
-	 * Since 0.0.2 version <b>this method is synchronized</b> to avoid concurrent executions. Also,
-	 * response time is always, at least, one second. See {@link #getInstance()}.
-	 * </p>
-	 * 
-	 * @param address
-	 * @return
-	 * @throws GeocodingLibraryException
+	 * Sleeps current thread to avoid OVER_QUERY_LIMIT Google Maps error.
 	 */
-	public synchronized Address geocode(Address address) throws GeocodingLibraryException {
+	private void sleep() {
 		if (Calendar.getInstance().getTimeInMillis() - lastUseTimestamp < OVER_QUERY_LIMIT_MIN_DELTA) {
 			try {
 				Thread.sleep(OVER_QUERY_LIMIT_MIN_DELTA
 						- (Calendar.getInstance().getTimeInMillis() - lastUseTimestamp));
 			} catch (InterruptedException e) {
 				logger.info("Execution interrupted");
-				return null;
 			}
 		}
+	}
+
+	/**
+	 * Executes the Google Maps API call. Response is stored in {@link #geocoderResultDocument}.
+	 * 
+	 * @param address
+	 * @throws GeocodingLibraryException
+	 */
+	private void executeQuery(Address address) throws GeocodingLibraryException {
 		URL url = null;
 		try {
 			url = new URL(GEOCODER_REQUEST_PREFIX_FOR_XML + "?address="
@@ -158,14 +202,58 @@ public class Geocoder {
 		if (logger.isDebugEnabled()) {
 			logger.debug(xmlToString(geocoderResultDocument));
 		}
-		if (geocoderResultDocument.getDocumentElement().getTextContent().contains(
-				"OVER_QUERY_LIMIT")) {
+		if (geocoderResultDocument.getDocumentElement().getTextContent()
+				.contains("OVER_QUERY_LIMIT")) {
 			throw new GeocodingRuntimeException("OVER_QUERY_LIMIT from Google Maps API", null);
 		}
+	}
 
+	/**
+	 * Geolocalize <code>address</code>. Passes {@link Address#getRawAddress()} to Google Maps API.
+	 * <p>
+	 * Since 0.0.2 version <b>this method is synchronized</b> to avoid concurrent executions. Also,
+	 * response time is always, at least, one second. See {@link #getInstance()}.
+	 * </p>
+	 * <p>
+	 * Since 1.0.1 new fields are stored in returned {@link Address} instance.
+	 * </p>
+	 * 
+	 * @param address
+	 * @return
+	 * @throws GeocodingLibraryException
+	 */
+	public synchronized Address geocode(Address address) throws GeocodingLibraryException {
+		sleep();
+		executeQuery(address);
 		storeLatLong(address);
-		
+		storeAddressDetails(address);
 		lastUseTimestamp = Calendar.getInstance().getTimeInMillis();
+		return address;
+	}
+		
+	/**
+	 * Fetch address information from given latitude and longitude.
+	 * <p>
+	 * Based on http://code.google.com/p/android/issues/detail?id=8816#c31.
+	 * </p>
+	 * 
+	 * @param latitude
+	 *            Address latitude
+	 * @param longitude
+	 *            Address longitude
+	 * @return {@link Address} instance with the found data
+	 * @throws GeocodingLibraryException
+	 * @since 1.0.1
+	 * 
+	 */
+	public synchronized Address reverseGeocode(double latitude, double longitude)
+			throws GeocodingLibraryException {
+		sleep();
+		Address address = new Address(latitude + "," + longitude);
+		address.setLatitude(Double.valueOf(latitude * 1E6).intValue());
+		address.setLongitude(Double.valueOf(longitude * 1E6).intValue());
+		executeQuery(address);
+		storeAddressDetails(address);
 		return address;
 	}
 
